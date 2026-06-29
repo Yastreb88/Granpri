@@ -1,0 +1,767 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Панель суперадмина</title>
+    <style>
+        body { font-family: Arial; max-width: 1200px; margin: 20px auto; padding: 20px; background: #f8f9fa; }
+        .menu { background: #2c7da0; padding: 10px; border-radius: 8px; color: white; margin-bottom: 20px; }
+        .menu a { color: white; margin-right: 15px; text-decoration: none; }
+        .menu a:hover { text-decoration: underline; }
+        .card { background: white; border: 1px solid #ddd; padding: 20px; margin: 15px 0; border-radius: 8px; box-shadow: 0 2px 4px rgba(0,0,0,0.1); }
+        table { width: 100%; border-collapse: collapse; margin: 10px 0; }
+        th, td { border: 1px solid #ddd; padding: 8px; text-align: left; }
+        th { background: #f0f0f0; cursor: pointer; }
+        th:hover { background: #e0e0e0; }
+        input, select { padding: 8px; margin: 5px 0; border: 1px solid #ddd; border-radius: 4px; }
+        button { padding: 10px 20px; background: #2c7da0; color: white; border: none; border-radius: 5px; cursor: pointer; }
+        button:hover { background: #1f5e7a; }
+        .btn-small { display: inline-block; padding: 4px 10px; font-size: 12px; border-radius: 4px; text-decoration: none; margin: 2px; }
+        .btn-csv { background: #6c757d; color: white; }
+        .btn-csv:hover { background: #5a6268; }
+        .btn-excel { background: #2c7da0; color: white; }
+        .btn-excel:hover { background: #1f5e7a; }
+        .btn-danger { background: #dc3545; color: white; }
+        .btn-danger:hover { background: #c82333; }
+        .btn-add { background: #28a745; color: white; }
+        .btn-add:hover { background: #218838; }
+        .btn-warning { background: #ffc107; color: black; }
+        .btn-warning:hover { background: #e0a800; }
+        .btn-sm { padding: 2px 8px; font-size: 11px; }
+        .info { background: #d4edda; padding: 10px; border-radius: 5px; margin: 10px 0; }
+        .success { background: #d4edda; padding: 10px; border-radius: 5px; margin: 10px 0; color: #155724; border: 1px solid #c3e6cb; }
+        .warning { background: #fff3cd; padding: 10px; border-radius: 5px; margin: 10px 0; color: #856404; border: 1px solid #ffc107; }
+        .progress-bar { background: #e9ecef; border-radius: 10px; height: 20px; width: 100%; margin: 5px 0; }
+        .progress-fill { background: #2c7da0; border-radius: 10px; height: 100%; text-align: center; color: white; font-size: 12px; line-height: 20px; }
+        .club-stat { margin: 5px 0; }
+        .tabs { display: flex; border-bottom: 2px solid #ddd; margin-bottom: 20px; flex-wrap: wrap; }
+        .tab-button { padding: 10px 20px; background: none; border: none; cursor: pointer; font-size: 16px; margin-right: 5px; border-radius: 8px 8px 0 0; }
+        .tab-button.active { background: #2c7da0; color: white; }
+        .tab-button:hover { background: #e0e0e0; }
+        .tab-content { display: none; }
+        .tab-content.active { display: block; }
+        .loaded-yes { color: green; font-weight: bold; }
+        .loaded-no { color: red; font-weight: bold; }
+        .filter-row { display: flex; gap: 10px; align-items: center; flex-wrap: wrap; }
+        .filter-row select, .filter-row input { padding: 6px; border: 1px solid #ddd; border-radius: 4px; }
+        .manage-row { display: flex; gap: 10px; align-items: center; flex-wrap: wrap; margin: 5px 0; }
+        .manage-row input { flex: 1; min-width: 150px; }
+        .user-row { background: #f8f9fa; padding: 8px; margin: 4px 0; border-radius: 4px; display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; }
+        .user-row span { flex: 1; }
+        .password-reveal { background: #fff3cd; padding: 2px 8px; border-radius: 4px; font-family: monospace; }
+        .settings-row { background: #f0f8ff; padding: 15px; border-radius: 8px; margin: 10px 0; }
+        .settings-row input { width: 80px; text-align: center; }
+        .clear-btn { background: #dc3545; color: white; border: none; padding: 8px 20px; border-radius: 5px; cursor: pointer; }
+        .clear-btn:hover { background: #c82333; }
+    </style>
+</head>
+<body>
+    <div class="menu">
+        <a href="/dashboard">Дашборд</a> |
+        <a href="/logout">Выйти</a>
+        <span style="float:right;">Суперадмин: {{ session.user }}</span>
+    </div>
+
+    <h2>🏆 Панель суперадмина</h2>
+
+    {% with messages = get_flashed_messages() %}
+        {% if messages %}
+            <div class="success">
+                {% for message in messages %}
+                    <p>{{ message }}</p>
+                {% endfor %}
+            </div>
+        {% endif %}
+    {% endwith %}
+
+    <div class="card" style="background: #e8f4f8;">
+        <form method="GET" action="/dashboard">
+            <label><strong>Сезон:</strong></label>
+            <select name="season" onchange="this.form.submit()">
+                {% for s in seasons %}
+                <option value="{{ s }}" {% if s == active_season %}selected{% endif %}>{{ s }}</option>
+                {% endfor %}
+            </select>
+        </form>
+        <small>Текущий сезон: <strong>{{ active_season }}</strong></small>
+    </div>
+
+    <div class="tabs">
+        <button class="tab-button active" onclick="openTab(event, 'tab-dashboard')">📊 Дашборд</button>
+        <button class="tab-button" onclick="openTab(event, 'tab-progress')">📈 Визуальный прогресс</button>
+        <button class="tab-button" onclick="openTab(event, 'tab-history')">📂 История загрузок</button>
+        <button class="tab-button" onclick="openTab(event, 'tab-manage')">⚙️ Управление</button>
+    </div>
+
+    <!-- Вкладка Дашборд -->
+    <div id="tab-dashboard" class="tab-content active">
+        <div class="info">
+            <strong>📌 Логика работы:</strong>
+            <ol>
+                <li>Администраторы клубов загружают CSV-файлы после каждого тура.</li>
+                <li>Вы в любой момент можете сгенерировать итоговую таблицу для любого клуба и категории.</li>
+                <li>Система автоматически соберёт все загруженные туры и посчитает сумму лучших <strong>{{ top_tours }}</strong> туров.</li>
+            </ol>
+        </div>
+
+        <div class="card">
+            <h3>📊 Сгенерировать итоговую таблицу</h3>
+            <form method="POST" action="/generate_summary">
+                <input type="hidden" name="season" value="{{ active_season }}">
+                <label>Клуб:</label>
+                <select name="club" required>
+                    {% for club in clubs %}
+                    <option value="{{ club }}">{{ club }}</option>
+                    {% endfor %}
+                </select>
+                <label>Категория:</label>
+                <select name="category" required>
+                    {% for cat in categories %}
+                    <option value="{{ cat }}">{{ cat }}</option>
+                    {% endfor %}
+                </select>
+                <button type="submit">Сформировать Excel</button>
+            </form>
+            <p><small>Будут использованы все туры, загруженные для выбранного клуба и категории.</small></p>
+        </div>
+    </div>
+
+    <!-- Вкладка Визуальный прогресс -->
+    <div id="tab-progress" class="tab-content">
+        <div class="card">
+            <h3>📈 Быстрый прогресс по клубам</h3>
+            <p><strong>Всего туров: {{ total_tours }}</strong></p>
+            {% for stat in club_stats %}
+            <div class="club-stat">
+                <strong>{{ stat.club }}</strong> — загружено {{ stat.loaded }} из {{ stat.total }} туров
+                <div class="progress-bar">
+                    <div class="progress-fill" style="width: {{ (stat.loaded / stat.total * 100)|round(0) }}%;">
+                        {{ (stat.loaded / stat.total * 100)|round(0) }}%
+                    </div>
+                </div>
+            </div>
+            {% else %}
+            <p>Нет загруженных файлов ни для одного клуба.</p>
+            {% endfor %}
+        </div>
+
+        <div class="card">
+            <h3>📈 Детальный прогресс по клубам, турам и категориям</h3>
+            <div class="filter-row">
+                <label>Фильтр по клубу:</label>
+                <select id="filterClub" onchange="filterTable()">
+                    <option value="">Все</option>
+                    {% for club in clubs %}
+                    <option value="{{ club }}">{{ club }}</option>
+                    {% endfor %}
+                </select>
+                <label>Фильтр по туру:</label>
+                <select id="filterTour" onchange="filterTable()">
+                    <option value="">Все</option>
+                    {% for tour in tours %}
+                    <option value="{{ tour }}">Тур {{ tour }}</option>
+                    {% endfor %}
+                </select>
+                <label>Фильтр по категории:</label>
+                <select id="filterCategory" onchange="filterTable()">
+                    <option value="">Все</option>
+                    {% for cat in categories %}
+                    <option value="{{ cat }}">{{ cat }}</option>
+                    {% endfor %}
+                </select>
+                <button onclick="clearFilters()">Сбросить фильтры</button>
+            </div>
+            <table id="progressTable">
+                <thead>
+                    <tr>
+                        <th onclick="sortProgress(0)">Клуб ↕</th>
+                        <th onclick="sortProgress(1)">Тур ↕</th>
+                        {% for cat in categories %}
+                        <th onclick="sortProgress({{ loop.index + 1 }})">{{ cat }} ↕</th>
+                        {% endfor %}
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for row in progress_table %}
+                    <tr class="progress-row" data-club="{{ row.club }}" data-tour="{{ row.tour }}">
+                        <td>{{ row.club }}</td>
+                        <td>Тур {{ row.tour }}</td>
+                        {% for cat in categories %}
+                        <td data-category="{{ cat }}">
+                            {% if row[cat] %}
+                                <span class="loaded-yes">✅</span>
+                            {% else %}
+                                <span class="loaded-no">⬜</span>
+                            {% endif %}
+                        </td>
+                        {% endfor %}
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+            <p><small>✅ — файл загружен, ⬜ — файл не загружен</small></p>
+        </div>
+    </div>
+
+    <!-- Вкладка История загрузок -->
+    <div id="tab-history" class="tab-content">
+        <div class="card">
+            <h3>📂 Полная история загрузок</h3>
+            
+            <div style="margin-bottom: 15px;">
+                <button onclick="clearAllUploads()" class="clear-btn">🗑️ Очистить всю историю</button>
+                <span id="clearStatus" style="margin-left: 10px;"></span>
+            </div>
+            
+            <table id="historyTable">
+                <thead>
+                    <tr>
+                        <th onclick="sortHistory(0)">Сезон ↕</th>
+                        <th onclick="sortHistory(1)">Клуб ↕</th>
+                        <th onclick="sortHistory(2)">Тур ↕</th>
+                        <th onclick="sortHistory(3)">Категория ↕</th>
+                        <th onclick="sortHistory(4)">Файл ↕</th>
+                        <th onclick="sortHistory(5)">Дата ↕</th>
+                        <th>Действия</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for upload in uploads %}
+                    <tr>
+                        <td>{{ upload[1] }}</td>
+                        <td>{{ upload[2] }}</td>
+                        <td>{{ upload[3] }}</td>
+                        <td>{{ upload[4] }}</td>
+                        <td>{{ upload[5] }}</td>
+                        <td>{{ upload[6] }}</td>
+                        <td>
+                            <a href="{{ url_for('download_csv', upload_id=upload[0]) }}" class="btn-small btn-csv">📥 CSV</a>
+                            <a href="{{ url_for('download_excel', upload_id=upload[0]) }}" class="btn-small btn-excel">📥 Excel</a>
+                            <button onclick="deleteUpload({{ upload[0] }})" class="btn-small btn-danger">🗑️</button>
+                        </td>
+                    </tr>
+                    {% else %}
+                    <tr><td colspan="7">Нет загруженных файлов</td></tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+
+    <!-- Вкладка Управление -->
+    <div id="tab-manage" class="tab-content">
+        <div class="card">
+            <h3>⚙️ Управление справочниками и настройками</h3>
+
+            <!-- Настройка количества лучших туров -->
+            <div class="settings-row">
+                <h4>⚙️ Настройка подсчёта</h4>
+                <div class="manage-row">
+                    <label><strong>Количество лучших туров для подсчёта суммы:</strong></label>
+                    <input type="number" id="topToursInput" value="{{ top_tours }}" min="1" max="20" style="width: 80px; text-align: center;">
+                    <button onclick="saveTopTours()" class="btn-add">💾 Сохранить</button>
+                    <span id="topToursStatus" style="margin-left: 10px; color: green;"></span>
+                </div>
+                <small>Текущее значение: <strong>{{ top_tours }}</strong> — используется при генерации итоговой таблицы.</small>
+            </div>
+
+            <!-- Сезоны -->
+            <div style="margin-bottom: 20px; padding: 10px; background: #f0f8ff; border-radius: 5px; margin-top: 20px;">
+                <h4>📅 Сезоны</h4>
+                <div class="manage-row">
+                    <input type="text" id="newSeason" placeholder="Название сезона (например, Осень 2026)">
+                    <button onclick="addSeason()" class="btn-add">➕ Добавить</button>
+                </div>
+                <ul id="seasonList">
+                    {% for season in seasons %}
+                    <li>{{ season }} 
+                        {% if season != active_season %}
+                        <button onclick="deleteSeason('{{ season }}')" class="btn-small btn-danger">✖</button>
+                        {% else %}
+                        <span style="color: #2c7da0;">(активный)</span>
+                        {% endif %}
+                    </li>
+                    {% endfor %}
+                </ul>
+                <small>Активный сезон задаётся в файле config.py (переменная ACTIVE_SEASON).</small>
+            </div>
+
+            <!-- Клубы -->
+            <div style="margin-bottom: 20px;">
+                <h4>🏛️ Клубы</h4>
+                <div class="manage-row">
+                    <input type="text" id="newClub" placeholder="Название клуба">
+                    <button onclick="addItem('club')" class="btn-add">➕ Добавить</button>
+                </div>
+                <ul id="clubList">
+                    {% for club in clubs %}
+                    <li>{{ club }} <button onclick="deleteItem('club', '{{ club }}')" class="btn-small btn-danger">✖</button></li>
+                    {% endfor %}
+                </ul>
+            </div>
+
+            <!-- Туры -->
+            <div style="margin-bottom: 20px;">
+                <h4>🔄 Туры</h4>
+                <div class="manage-row">
+                    <input type="text" id="newTour" placeholder="Номер тура (например, 7)">
+                    <button onclick="addTour()" class="btn-add">➕ Добавить</button>
+                </div>
+                <ul id="tourList">
+                    {% for tour in tours %}
+                    <li>Тур {{ tour }} <button onclick="deleteTour('{{ tour }}')" class="btn-small btn-danger">✖</button></li>
+                    {% endfor %}
+                </ul>
+            </div>
+
+            <!-- Категории -->
+            <div style="margin-bottom: 20px;">
+                <h4>📂 Категории</h4>
+                <div class="manage-row">
+                    <input type="text" id="newCategory" placeholder="Название категории">
+                    <button onclick="addCategory()" class="btn-add">➕ Добавить</button>
+                </div>
+                <ul id="categoryList">
+                    {% for cat in categories %}
+                    <li>{{ cat }} <button onclick="deleteCategory('{{ cat }}')" class="btn-small btn-danger">✖</button></li>
+                    {% endfor %}
+                </ul>
+            </div>
+        </div>
+
+        <!-- Администраторы -->
+        <div class="card">
+            <h3>👥 Администраторы клубов</h3>
+            
+            <div style="margin-bottom: 15px; padding: 10px; background: #f0f8ff; border-radius: 5px;">
+                <h4>Добавить нового администратора</h4>
+                <div class="manage-row">
+                    <input type="text" id="newUsername" placeholder="Логин" style="flex: 0.5;">
+                    <input type="text" id="newPassword" placeholder="Пароль" style="flex: 0.5;">
+                    <select id="newClubForUser" style="flex: 1;">
+                        <option value="">-- Выберите клуб --</option>
+                        {% for club in clubs %}
+                        <option value="{{ club }}">{{ club }}</option>
+                        {% endfor %}
+                    </select>
+                    <button onclick="addUser()" class="btn-add">➕ Добавить</button>
+                </div>
+                <small>Пароль будет виден в списке после создания.</small>
+            </div>
+
+            <h4>Список администраторов</h4>
+            <div id="userList">
+                {% for user in users %}
+                <div class="user-row">
+                    <span><strong>{{ user.username }}</strong> → {{ user.club or 'не привязан' }}</span>
+                    <span><small>роль: {{ user.role }}</small></span>
+                    {% if user.username != 'Admin' %}
+                    <button onclick="showPassword('{{ user.username }}')" class="btn-small btn-warning">👁️ Пароль</button>
+                    <button onclick="deleteUser('{{ user.username }}')" class="btn-small btn-danger">✖</button>
+                    {% else %}
+                    <span style="color: #2c7da0;">(суперадмин)</span>
+                    {% endif %}
+                </div>
+                {% else %}
+                <p>Нет администраторов клубов.</p>
+                {% endfor %}
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // --- Очистка всей истории ---
+        function clearAllUploads() {
+            if (!confirm('⚠️ Вы уверены, что хотите удалить ВСЮ историю загрузок?\n\nЭто действие нельзя отменить!')) {
+                return;
+            }
+            
+            var statusSpan = document.getElementById('clearStatus');
+            statusSpan.textContent = '⏳ Удаление...';
+            statusSpan.style.color = 'orange';
+            
+            fetch('/api/clear_all_uploads', {
+                method: 'DELETE',
+                headers: { 'Content-Type': 'application/json' }
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (data.status === 'ok') {
+                    statusSpan.textContent = '✅ Удалено записей: ' + data.deleted_records + ', файлов: ' + data.deleted_files;
+                    statusSpan.style.color = 'green';
+                    setTimeout(() => {
+                        window.location.reload();
+                    }, 2000);
+                } else {
+                    statusSpan.textContent = '❌ Ошибка: ' + data.error;
+                    statusSpan.style.color = 'red';
+                }
+            })
+            .catch(error => {
+                statusSpan.textContent = '❌ Ошибка: ' + error;
+                statusSpan.style.color = 'red';
+            });
+        }
+
+        // --- Остальные функции (туры, категории, пользователи) ---
+        // ... (остальной код из вашего admin.html)
+        
+        // --- Сохранение количества лучших туров ---
+        function saveTopTours() {
+            var input = document.getElementById('topToursInput');
+            var value = parseInt(input.value);
+            if (isNaN(value) || value < 1) {
+                alert('Введите число больше 0');
+                return;
+            }
+            fetch('/api/settings', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ top_tours: value })
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (data.status === 'ok') {
+                    document.getElementById('topToursStatus').textContent = '✅ Сохранено!';
+                    setTimeout(() => {
+                        document.getElementById('topToursStatus').textContent = '';
+                    }, 3000);
+                    document.querySelector('.settings-row small strong').textContent = value;
+                } else {
+                    alert('Ошибка: ' + data.error);
+                }
+            })
+            .catch(error => alert('Ошибка: ' + error));
+        }
+
+        // --- Управление турами ---
+        function addTour() {
+            var input = document.getElementById('newTour');
+            var number = input.value.trim();
+            if (!number) {
+                alert('Введите номер тура (например, 7)');
+                return;
+            }
+            fetch('/api/tours', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ number: number, season: '{{ active_season }}' })
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (data.status === 'ok') {
+                    window.location.href = '/dashboard?tab=tab-manage';
+                } else {
+                    alert('Ошибка: ' + (data.error || 'Неизвестная ошибка'));
+                }
+            })
+            .catch(error => alert('Ошибка: ' + error));
+        }
+
+        function deleteTour(number) {
+            if (!confirm('Удалить тур ' + number + '?')) return;
+            fetch('/api/tours', {
+                method: 'DELETE',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ number: number })
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (data.status === 'ok') {
+                    window.location.href = '/dashboard?tab=tab-manage';
+                } else {
+                    alert('Ошибка: ' + (data.error || 'Неизвестная ошибка'));
+                }
+            })
+            .catch(error => alert('Ошибка: ' + error));
+        }
+
+        // --- Управление категориями ---
+        function addCategory() {
+            var input = document.getElementById('newCategory');
+            var name = input.value.trim();
+            if (!name) {
+                alert('Введите название категории');
+                return;
+            }
+            fetch('/api/categories', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ name: name, season: '{{ active_season }}' })
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (data.status === 'ok') {
+                    window.location.href = '/dashboard?tab=tab-manage';
+                } else {
+                    alert('Ошибка: ' + (data.error || 'Неизвестная ошибка'));
+                }
+            })
+            .catch(error => alert('Ошибка: ' + error));
+        }
+
+        function deleteCategory(name) {
+            if (!confirm('Удалить категорию ' + name + '?')) return;
+            fetch('/api/categories', {
+                method: 'DELETE',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ name: name })
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (data.status === 'ok') {
+                    window.location.href = '/dashboard?tab=tab-manage';
+                } else {
+                    alert('Ошибка: ' + (data.error || 'Неизвестная ошибка'));
+                }
+            })
+            .catch(error => alert('Ошибка: ' + error));
+        }
+
+        // --- Остальные функции (сезоны, клубы, пользователи) ---
+        function showPassword(username) {
+            fetch('/api/users')
+                .then(response => response.json())
+                .then(data => {
+                    var user = data.find(u => u.username === username);
+                    if (user && user.password) {
+                        alert('Пароль для ' + username + ': ' + user.password);
+                    } else {
+                        alert('Пароль не найден для ' + username);
+                    }
+                });
+        }
+
+        function deleteUpload(uploadId) {
+            if (!confirm('Удалить эту загрузку?')) return;
+            fetch('/api/delete_upload/' + uploadId, {
+                method: 'DELETE',
+                headers: { 'Content-Type': 'application/json' }
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (data.status === 'ok') {
+                    window.location.href = '/dashboard?tab=tab-history';
+                } else {
+                    alert('Ошибка: ' + data.error);
+                }
+            });
+        }
+
+        function openTab(evt, tabName) {
+            var i, tabContent, tabButtons;
+            tabContent = document.getElementsByClassName("tab-content");
+            for (i = 0; i < tabContent.length; i++) {
+                tabContent[i].className = tabContent[i].className.replace(" active", "");
+            }
+            tabButtons = document.getElementsByClassName("tab-button");
+            for (i = 0; i < tabButtons.length; i++) {
+                tabButtons[i].className = tabButtons[i].className.replace(" active", "");
+            }
+            document.getElementById(tabName).className += " active";
+            evt.currentTarget.className += " active";
+            var url = new URL(window.location.href);
+            url.searchParams.set('tab', tabName);
+            window.history.replaceState({}, '', url);
+        }
+
+        document.addEventListener('DOMContentLoaded', function() {
+            var params = new URLSearchParams(window.location.search);
+            var tab = params.get('tab');
+            if (tab) {
+                var buttons = document.getElementsByClassName('tab-button');
+                for (var i = 0; i < buttons.length; i++) {
+                    if (buttons[i].getAttribute('onclick').includes(tab)) {
+                        buttons[i].click();
+                        break;
+                    }
+                }
+            }
+        });
+
+        function sortHistory(col) {
+            var table = document.getElementById("historyTable");
+            var rows = Array.from(table.rows).slice(1);
+            var ascending = table.dataset.sortAsc === 'true';
+            ascending = !ascending;
+            table.dataset.sortAsc = ascending;
+            rows.sort(function(a, b) {
+                var aVal = a.cells[col].innerText.trim();
+                var bVal = b.cells[col].innerText.trim();
+                if (col === 5) {
+                    aVal = new Date(aVal);
+                    bVal = new Date(bVal);
+                } else if (!isNaN(aVal) && !isNaN(bVal)) {
+                    aVal = parseFloat(aVal);
+                    bVal = parseFloat(bVal);
+                } else {
+                    aVal = aVal.toLowerCase();
+                    bVal = bVal.toLowerCase();
+                }
+                if (aVal < bVal) return ascending ? -1 : 1;
+                if (aVal > bVal) return ascending ? 1 : -1;
+                return 0;
+            });
+            rows.forEach(function(row) { table.tBodies[0].appendChild(row); });
+        }
+
+        function filterTable() {
+            var clubFilter = document.getElementById('filterClub').value;
+            var tourFilter = document.getElementById('filterTour').value;
+            var categoryFilter = document.getElementById('filterCategory').value;
+            var rows = document.querySelectorAll('.progress-row');
+            rows.forEach(function(row) {
+                var show = true;
+                if (clubFilter && row.dataset.club !== clubFilter) show = false;
+                if (tourFilter && row.dataset.tour !== tourFilter) show = false;
+                if (categoryFilter) {
+                    var cells = row.querySelectorAll('td[data-category]');
+                    var found = false;
+                    cells.forEach(function(cell) {
+                        if (cell.dataset.category === categoryFilter) {
+                            if (cell.innerHTML.includes('✅')) found = true;
+                        }
+                    });
+                    if (!found) show = false;
+                }
+                row.style.display = show ? '' : 'none';
+            });
+        }
+
+        function clearFilters() {
+            document.getElementById('filterClub').value = '';
+            document.getElementById('filterTour').value = '';
+            document.getElementById('filterCategory').value = '';
+            filterTable();
+        }
+
+        var progressSortAsc = true;
+        function sortProgress(col) {
+            var table = document.getElementById("progressTable");
+            var rows = Array.from(table.rows).slice(1);
+            progressSortAsc = !progressSortAsc;
+            rows.sort(function(a, b) {
+                var aVal = a.cells[col].innerText.trim();
+                var bVal = b.cells[col].innerText.trim();
+                if (aVal < bVal) return progressSortAsc ? -1 : 1;
+                if (aVal > bVal) return progressSortAsc ? 1 : -1;
+                return 0;
+            });
+            rows.forEach(function(row) { table.tBodies[0].appendChild(row); });
+        }
+
+        function addSeason() {
+            var input = document.getElementById('newSeason');
+            var name = input.value.trim();
+            if (!name) { alert('Введите название сезона'); return; }
+            fetch('/api/seasons', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ name: name })
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (data.status === 'ok') {
+                    window.location.href = '/dashboard?tab=tab-manage';
+                } else {
+                    alert('Ошибка: ' + data.error);
+                }
+            });
+        }
+
+        function deleteSeason(name) {
+            if (!confirm('Удалить сезон ' + name + '? (Будут удалены все связанные клубы, туры и категории)')) return;
+            fetch('/api/seasons', {
+                method: 'DELETE',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ name: name })
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (data.status === 'ok') {
+                    window.location.href = '/dashboard?tab=tab-manage';
+                } else {
+                    alert('Ошибка: ' + data.error);
+                }
+            });
+        }
+
+        function addItem(type) {
+            var inputId = 'new' + type.charAt(0).toUpperCase() + type.slice(1);
+            var input = document.getElementById(inputId);
+            var name = input.value.trim();
+            if (!name) { alert('Введите название'); return; }
+            fetch('/api/' + type + 's', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ name: name, season: '{{ active_season }}' })
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (data.status === 'ok') {
+                    window.location.href = '/dashboard?tab=tab-manage';
+                } else {
+                    alert('Ошибка: ' + data.error);
+                }
+            });
+        }
+
+        function deleteItem(type, name) {
+            if (!confirm('Удалить ' + name + '?')) return;
+            fetch('/api/' + type + 's', {
+                method: 'DELETE',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ name: name })
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (data.status === 'ok') {
+                    window.location.href = '/dashboard?tab=tab-manage';
+                } else {
+                    alert('Ошибка: ' + data.error);
+                }
+            });
+        }
+
+        function addUser() {
+            var username = document.getElementById('newUsername').value.trim();
+            var password = document.getElementById('newPassword').value.trim();
+            var club = document.getElementById('newClubForUser').value;
+            if (!username || !password || !club) {
+                alert('Заполните все поля (логин, пароль, клуб)');
+                return;
+            }
+            fetch('/api/users', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ username: username, password: password, club: club })
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (data.status === 'ok') {
+                    alert('✅ Администратор ' + username + ' создан. Пароль: ' + data.password);
+                    window.location.href = '/dashboard?tab=tab-manage';
+                } else {
+                    alert('Ошибка: ' + data.error);
+                }
+            });
+        }
+
+        function deleteUser(username) {
+            if (!confirm('Удалить администратора ' + username + '?')) return;
+            fetch('/api/users', {
+                method: 'DELETE',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ username: username })
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (data.status === 'ok') {
+                    window.location.href = '/dashboard?tab=tab-manage';
+                } else {
+                    alert('Ошибка: ' + data.error);
+                }
+            });
+        }
+    </script>
+</body>
+</html>

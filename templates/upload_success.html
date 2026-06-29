@@ -1,0 +1,27 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Файл успешно отправлен</title>
+    <style>
+        body { font-family: Arial; max-width: 600px; margin: 100px auto; padding: 20px; text-align: center; }
+        .success { background: #d4edda; padding: 30px; border-radius: 10px; border: 1px solid #c3e6cb; }
+        h2 { color: #155724; }
+        .btn { display: inline-block; margin-top: 20px; padding: 10px 20px; background: #2c7da0; color: white; text-decoration: none; border-radius: 5px; }
+        .btn:hover { background: #1f5e7a; }
+    </style>
+</head>
+<body>
+    <div class="success">
+        <h2>✅ Файл успешно отправлен!</h2>
+        <p>Excel-файл с результатами скачан.</p>
+        <br>
+        <a href="/dashboard" class="btn">← Вернуться на дашборд</a>
+    </div>
+
+    <script>
+        setTimeout(function() {
+            window.location.href = "{{ url_for('download_file', filename=session.get('download_file', '')) }}";
+        }, 2000);
+    </script>
+</body>
+</html>
